@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'dart:math' as math;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class GptScreen extends StatefulWidget {
   const GptScreen({Key? key}) : super(key: key);
@@ -20,11 +21,17 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
   bool _speechEnabled = false;
   late AnimationController _animationController;
   bool _isRecording = false;
+  final FlutterTts _flutterTts = FlutterTts();
+  String _selectedLanguage = "en"; // Default to English
+  bool _isTtsInitialized = false;
+  bool _isSpeaking = false;
+  String? _selectedText;
 
   @override
   void initState() {
     super.initState();
     _requestPermissions().then((_) => _initSpeech());
+    _initTts();
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -65,6 +72,30 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
     }
   }
 
+  Future<void> _initTts() async {
+    try {
+      print("Initializing TTS...");
+      
+      // Basic initialization
+      bool? isLanguageAvailable = await _flutterTts.isLanguageAvailable(_selectedLanguage);
+      print("Is language available: $isLanguageAvailable");
+      
+      if (isLanguageAvailable == true) {
+        await _flutterTts.setLanguage(_selectedLanguage);
+        await _flutterTts.setPitch(1.0);
+        await _flutterTts.setSpeechRate(0.5);
+        await _flutterTts.setVolume(1.0);
+        
+        _isTtsInitialized = true;
+        print("TTS initialized successfully");
+      } else {
+        print("Selected language is not available");
+      }
+    } catch (e) {
+      print("Error initializing TTS: $e");
+    }
+  }
+
   void _startListening() async {
     print("Starting to listen...");
     setState(() => _isRecording = true);
@@ -97,13 +128,17 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
   }
 
   void _stopListening() async {
-    setState(() => _isRecording = false);
+    print("Stopping listening...");
     await _speechToText.stop();
     Navigator.of(context).pop();
     
     if (_controller.text.isNotEmpty) {
-      await _sendMessage();
+      print("Text captured, sending message");
+      await _sendMessage();  // Send message first
     }
+    
+    setState(() => _isRecording = false);  // Reset recording state after sending
+    print("Recording state reset");
   }
 
   void _showRecordingPopup() {
@@ -219,10 +254,123 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
       });
 
       final response = await _getGeminiResponse(userMessage);
+      // Clean the response by removing asterisks
+      final cleanedResponse = response.replaceAll('**', '');
       setState(() {
-        messages.add(response);
+        messages.add(cleanedResponse);
       });
     }
+  }
+
+  Future<void> _speak(String text) async {
+    try {
+      if (_isSpeaking) {
+        // If already speaking, stop the speech
+        await _flutterTts.stop();
+        setState(() {
+          _isSpeaking = false;
+        });
+        return;
+      }
+
+      setState(() {
+        _isSpeaking = true;
+      });
+
+      print("Attempting to speak: $text");
+      
+      // Break text into smaller chunks
+      List<String> chunks = [];
+      if (text.length > 200) {
+        List<String> sentences = text.split(RegExp(r'[.!?]+'));
+        String currentChunk = '';
+        
+        for (String sentence in sentences) {
+          sentence = sentence.trim();
+          if (sentence.isEmpty) continue;
+          
+          if (currentChunk.length + sentence.length > 200) {
+            if (currentChunk.isNotEmpty) {
+              chunks.add(currentChunk.trim());
+            }
+            currentChunk = sentence;
+          } else {
+            currentChunk += (currentChunk.isEmpty ? '' : '. ') + sentence;
+          }
+        }
+        
+        if (currentChunk.isNotEmpty) {
+          chunks.add(currentChunk.trim());
+        }
+      } else {
+        chunks.add(text);
+      }
+      
+      // Speak each chunk
+      for (String chunk in chunks) {
+        if (!_isSpeaking) break; // Stop if button was pressed again
+        
+        print("Speaking chunk: $chunk");
+        var result = await _flutterTts.speak(chunk);
+        print("Chunk speech result: $result");
+        
+        if (result == 1) {
+          await Future.delayed(Duration(milliseconds: 1000 + (chunk.length * 50)));
+        } else {
+          print("Failed to speak chunk");
+        }
+      }
+      
+    } catch (e) {
+      print("Error speaking: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to speak text. Please try again."),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      setState(() {
+        _isSpeaking = false;
+      });
+    }
+  }
+
+  Widget _buildMessageBubble(String message, bool isUserMessage, int index) {
+    return Align(
+      alignment: isUserMessage ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isUserMessage ? const Color(0xFF1B4B3C) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
+        child: SelectableText(
+          message,
+          style: TextStyle(
+            color: isUserMessage ? Colors.white : Colors.black,
+          ),
+          onSelectionChanged: (selection, cause) {
+            if (selection.textInside(message).isNotEmpty) {
+              setState(() {
+                _selectedText = selection.textInside(message);
+              });
+            }
+          },
+        ),
+      ),
+    );
   }
 
   @override
@@ -235,6 +383,57 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
           'Chat Assistant',
           style: TextStyle(color: Colors.white),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              _isSpeaking ? Icons.stop : Icons.volume_up,
+              color: _isSpeaking ? Colors.yellow : Colors.white,
+            ),
+            onPressed: () {
+              if (_selectedText != null && _selectedText!.isNotEmpty) {
+                _speak(_selectedText!);
+              } else if (messages.isNotEmpty) {
+                int lastAIMessageIndex = messages.length - 1;
+                if (lastAIMessageIndex % 2 == 1) {
+                  _speak(messages[lastAIMessageIndex]);
+                }
+              }
+            },
+          ),
+          DropdownButton<String>(
+            dropdownColor: const Color(0xFF1B4B3C),
+            value: _selectedLanguage,
+            style: const TextStyle(color: Colors.white),
+            underline: Container(),
+            onChanged: (String? newValue) {
+              setState(() {
+                _selectedLanguage = newValue!;
+              });
+            },
+            items: <String>[
+              'en', // English
+              'hi', // Hindi
+              'ta', // Tamil
+              'te', // Telugu
+              'ml', // Malayalam
+              'kn', // Kannada
+              'bn', // Bengali
+              'gu', // Gujarati
+              'mr', // Marathi
+              'or', // Odia
+              'as', // Assamese
+            ].map<DropdownMenuItem<String>>((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(
+                  value.toUpperCase(),
+                  style: const TextStyle(color: Colors.white),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(width: 10),
+        ],
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -248,37 +447,7 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
               itemCount: messages.length,
               itemBuilder: (context, index) {
                 final isUserMessage = index % 2 == 0;
-                return Align(
-                  alignment: isUserMessage 
-                      ? Alignment.centerRight 
-                      : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isUserMessage 
-                          ? const Color(0xFF1B4B3C) 
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    constraints: BoxConstraints(
-                      maxWidth: MediaQuery.of(context).size.width * 0.75,
-                    ),
-                    child: Text(
-                      messages[index],
-                      style: TextStyle(
-                        color: isUserMessage ? Colors.white : Colors.black,
-                      ),
-                    ),
-                  ),
-                );
+                return _buildMessageBubble(messages[index], isUserMessage, index);
               },
             ),
           ),
@@ -351,6 +520,7 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
   void dispose() {
     _controller.dispose();
     _animationController.dispose();
+    _flutterTts.stop();
     super.dispose();
   }
 }
