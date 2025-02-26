@@ -211,6 +211,7 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
       }
     } catch (e) {
       print("Error stopping speech: $e");
+      setState(() => _isRecording = false);
     }
   }
 
@@ -239,14 +240,14 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: Color(0xFF1B4B3C),
+                              color: Colors.red,
                               width: 3,
                             ),
                           ),
                           child: Center(
                             child: Icon(
                               Icons.mic,
-                              color: Color(0xFF1B4B3C),
+                              color: Colors.red,
                               size: 30,
                             ),
                           ),
@@ -259,7 +260,7 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
                     "Listening...",
                     style: TextStyle(
                       fontSize: 18,
-                      color: Color(0xFF1B4B3C),
+                      color: Colors.red,
                     ),
                   ),
                   SizedBox(height: 10),
@@ -280,7 +281,7 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
               TextButton(
                 child: Text(
                   "Stop",
-                  style: TextStyle(color: Color(0xFF1B4B3C)),
+                  style: TextStyle(color: Colors.red),
                 ),
                 onPressed: _stopListening,
               ),
@@ -594,18 +595,22 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
                 const SizedBox(width: 8),
                 IconButton(
                   icon: Icon(
-                    _speechToText.isListening ? Icons.mic_off : Icons.mic,
+                    _isRecording ? Icons.mic : Icons.mic_none,
                     color: _speechEnabled 
-                        ? Color(0xFF1B4B3C)
-                        : Colors.grey, // Grey when speech is not enabled
+                        ? (_isRecording 
+                            ? Colors.red 
+                            : Color(0xFF1B4B3C))
+                        : Colors.grey,
                   ),
-                  onPressed: _speechEnabled ? () {
-                    if (_speechToText.isListening) {
-                      _stopListening();
-                    } else {
-                      _startListening();
-                    }
-                  } : null, // Disable button if speech is not enabled
+                  onPressed: _speechEnabled 
+                      ? () {
+                          if (_isRecording) {
+                            _stopListening();
+                          } else {
+                            _startListening();
+                          }
+                        } 
+                      : null,
                 ),
                 IconButton(
                   icon: const Icon(
