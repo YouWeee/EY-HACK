@@ -1,0 +1,48 @@
+name: ey
+description: A new Flutter project.
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  http: ^1.2.0
+  file_picker: ^5.2.10
+  permission_handler: ^11.3.0
+  path_provider: ^2.1.2
+  url_launcher: ^6.2.4
+  shared_preferences: ^2.2.2
+  speech_to_text: ^6.6.0
+  flutter_tts: ^3.8.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/seva_setu_logo.png
+    - assets/images/seva_setu_logo.png
+    - assets/images/rashtriya_swasthya.png
+    - assets/images/pradhan_mantri.png
+    - assets/images/esic.png
+    - assets/images/deendayal.png
+    - assets/images/pradhan_mantri_awas.png
+    - assets/images/national_family.png
+    - assets/images/rashtriya_parivarik.png
+    - assets/images/pradhan_mantri_jan.png
+    - assets/images/atal_pension.png
+    - assets/images/sukanya_samriddhi.png
+    - assets/images/pradhan_mantri_jeevan.png
+    - assets/images/kisan_credit.png
+    - assets/images/national_electric.png
+    - assets/images/pradhan_mantri_gram.png
+    - assets/images/pm_ebus.png
+    - assets/images/national_highway.png
