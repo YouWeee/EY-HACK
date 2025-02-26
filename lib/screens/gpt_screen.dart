@@ -57,17 +57,38 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
           print("Speech recognition error: ${errorNotification.errorMsg}");
           setState(() {
             _speechEnabled = false;
+<<<<<<< HEAD
+=======
+            _isRecording = false;
+>>>>>>> master
           });
         },
         onStatus: (status) {
           print("Speech recognition status: $status");
+<<<<<<< HEAD
         },
       );
+=======
+          if (status == 'notListening') {
+            setState(() => _isRecording = false);
+          }
+        },
+      );
+      
+      // Check available languages
+      var languages = await _speechToText.locales();
+      print("Available languages: ${languages.map((e) => '${e.localeId}: ${e.name}')}");
+      
+>>>>>>> master
       print("Speech initialization result: $_speechEnabled");
       setState(() {});
     } catch (e) {
       print("Error initializing speech: $e");
       _speechEnabled = false;
+<<<<<<< HEAD
+=======
+      _isRecording = false;
+>>>>>>> master
       setState(() {});
     }
   }
@@ -104,13 +125,61 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
     try {
       if (_speechEnabled) {
         print("Speech is enabled, attempting to listen");
+<<<<<<< HEAD
         await _speechToText.listen(
+=======
+        
+        // Show the popup before starting to listen
+        _showRecordingPopup();
+        
+        // Get the locale ID based on selected language
+        String localeId;
+        switch (_selectedLanguage) {
+          case 'hi':
+            localeId = 'hi-IN';
+            break;
+          case 'ta':
+            localeId = 'ta-IN';
+            break;
+          case 'te':
+            localeId = 'te-IN';
+            break;
+          case 'ml':
+            localeId = 'ml-IN';
+            break;
+          case 'kn':
+            localeId = 'kn-IN';
+            break;
+          case 'bn':
+            localeId = 'bn-IN';
+            break;
+          case 'gu':
+            localeId = 'gu-IN';
+            break;
+          case 'mr':
+            localeId = 'mr-IN';
+            break;
+          case 'or':
+            localeId = 'or-IN';
+            break;
+          case 'as':
+            localeId = 'as-IN';
+            break;
+          default:
+            localeId = 'en-US';
+        }
+        
+        print("Using locale: $localeId");
+        
+        if (!await _speechToText.listen(
+>>>>>>> master
           onResult: (result) {
             print("Got result: ${result.recognizedWords}");
             setState(() {
               _controller.text = result.recognizedWords;
             });
           },
+<<<<<<< HEAD
           listenFor: Duration(seconds: 30),
           pauseFor: Duration(seconds: 3),
           partialResults: true,
@@ -124,11 +193,42 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
       }
     } catch (e) {
       print("Error starting voice input: $e");
+=======
+          localeId: localeId,
+          listenFor: Duration(seconds: 30),
+          pauseFor: Duration(seconds: 3),
+          partialResults: true,
+          cancelOnError: true,
+        )) {
+          print("Failed to start listening");
+          // If listening fails, dismiss the popup
+          if (Navigator.canPop(context)) {
+            Navigator.of(context).pop();
+          }
+        }
+      } else {
+        print("Speech not enabled. Reinitializing...");
+        _initSpeech();
+        if (_speechEnabled) {
+          _startListening();
+        }
+      }
+    } catch (e) {
+      print("Error starting voice input: $e");
+      setState(() {
+        _isRecording = false;
+      });
+      // If there's an error, dismiss the popup
+      if (Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+>>>>>>> master
     }
   }
 
   void _stopListening() async {
     print("Stopping listening...");
+<<<<<<< HEAD
     await _speechToText.stop();
     Navigator.of(context).pop();
     
@@ -139,6 +239,24 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
     
     setState(() => _isRecording = false);  // Reset recording state after sending
     print("Recording state reset");
+=======
+    try {
+      await _speechToText.stop();
+      setState(() => _isRecording = false);
+      
+      if (Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+      
+      if (_controller.text.isNotEmpty) {
+        print("Text captured, sending message");
+        await _sendMessage();
+      }
+    } catch (e) {
+      print("Error stopping speech: $e");
+      setState(() => _isRecording = false);
+    }
+>>>>>>> master
   }
 
   void _showRecordingPopup() {
@@ -166,14 +284,22 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
+<<<<<<< HEAD
                               color: Color(0xFF1B4B3C),
+=======
+                              color: Colors.red,
+>>>>>>> master
                               width: 3,
                             ),
                           ),
                           child: Center(
                             child: Icon(
                               Icons.mic,
+<<<<<<< HEAD
                               color: Color(0xFF1B4B3C),
+=======
+                              color: Colors.red,
+>>>>>>> master
                               size: 30,
                             ),
                           ),
@@ -186,7 +312,11 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
                     "Listening...",
                     style: TextStyle(
                       fontSize: 18,
+<<<<<<< HEAD
                       color: Color(0xFF1B4B3C),
+=======
+                      color: Colors.red,
+>>>>>>> master
                     ),
                   ),
                   SizedBox(height: 10),
@@ -207,7 +337,11 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
               TextButton(
                 child: Text(
                   "Stop",
+<<<<<<< HEAD
                   style: TextStyle(color: Color(0xFF1B4B3C)),
+=======
+                  style: TextStyle(color: Colors.red),
+>>>>>>> master
                 ),
                 onPressed: _stopListening,
               ),
@@ -229,6 +363,10 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
         },
         body: jsonEncode({
           'prompt': prompt,
+<<<<<<< HEAD
+=======
+          'language': _selectedLanguage,
+>>>>>>> master
         }),
       );
 
@@ -236,10 +374,21 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
         final data = jsonDecode(response.body);
         return data['response'] as String;
       } else {
+<<<<<<< HEAD
         return 'Sorry, I encountered an error. Please try again.';
       }
     } catch (e) {
       return 'Network error occurred. Please check your connection.';
+=======
+        return _selectedLanguage == 'hi' 
+            ? 'क्षमा करें, कोई त्रुटि हुई। कृपया पुनः प्रयास करें।'
+            : 'Sorry, I encountered an error. Please try again.';
+      }
+    } catch (e) {
+      return _selectedLanguage == 'hi'
+          ? 'नेटवर्क त्रुटि हुई। कृपया अपना कनेक्शन जांचें।'
+          : 'Network error occurred. Please check your connection.';
+>>>>>>> master
     } finally {
       setState(() => _isLoading = false);
     }
@@ -373,6 +522,37 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
     );
   }
 
+<<<<<<< HEAD
+=======
+  // Update the hint text getter to support all languages
+  String get _getHintText {
+    switch (_selectedLanguage) {
+      case 'hi':
+        return 'अपना संदेश लिखें...';
+      case 'ta':
+        return 'உங்கள் செய்தியை தட்டச்சு செய்யவும்...';
+      case 'te':
+        return 'మీ సందేశాన్ని టైప్ చేయండి...';
+      case 'ml':
+        return 'നിങ്ങളുടെ സന്ദേശം ടൈപ്പ് ചെയ്യുക...';
+      case 'kn':
+        return 'ನಿಮ್ಮ ಸಂದೇಶವನ್ನು ಟೈಪ್ ಮಾಡಿ...';
+      case 'bn':
+        return 'আপনার বার্তা টাইপ করুন...';
+      case 'gu':
+        return 'તમારો સંદેશ ટાઇપ કરો...';
+      case 'mr':
+        return 'तुमचा संदेश टाइप करा...';
+      case 'or':
+        return 'ଆପଣଙ୍କ ମେସେଜ୍ ଟାଇପ୍ କରନ୍ତୁ...';
+      case 'as':
+        return 'আপোনাৰ বাৰ্তা টাইপ কৰক...';
+      default:
+        return 'Type your message...';
+    }
+  }
+
+>>>>>>> master
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -474,8 +654,13 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
                 Expanded(
                   child: TextField(
                     controller: _controller,
+<<<<<<< HEAD
                     decoration: const InputDecoration(
                       hintText: 'Type your message...',
+=======
+                    decoration: InputDecoration(
+                      hintText: _getHintText,
+>>>>>>> master
                       border: OutlineInputBorder(),
                       contentPadding: EdgeInsets.symmetric(
                         horizontal: 16,
@@ -488,6 +673,7 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
                 const SizedBox(width: 8),
                 IconButton(
                   icon: Icon(
+<<<<<<< HEAD
                     _speechToText.isListening ? Icons.mic_off : Icons.mic,
                     color: _speechEnabled 
                         ? Color(0xFF1B4B3C)
@@ -500,6 +686,24 @@ class _GptScreenState extends State<GptScreen> with SingleTickerProviderStateMix
                       _startListening();
                     }
                   } : null, // Disable button if speech is not enabled
+=======
+                    _isRecording ? Icons.mic : Icons.mic_none,
+                    color: _speechEnabled 
+                        ? (_isRecording 
+                            ? Colors.red 
+                            : Color(0xFF1B4B3C))
+                        : Colors.grey,
+                  ),
+                  onPressed: _speechEnabled 
+                      ? () {
+                          if (_isRecording) {
+                            _stopListening();
+                          } else {
+                            _startListening();
+                          }
+                        } 
+                      : null,
+>>>>>>> master
                 ),
                 IconButton(
                   icon: const Icon(
